@@ -2,7 +2,8 @@ name: Build installers
 
 on:
   push:
-    branches: [main, 'codex/**']
+    branches: [main, 'release/**']
+    paths-ignore: ['**/*.md', '.github/workflows/publish.yml']
     tags: ['v*']
   pull_request:
   workflow_dispatch:
@@ -69,11 +70,11 @@ jobs:
       - name: Exercise the packaged application (Linux)
         if: runner.os == 'Linux'
         run: xvfb-run -a npm run test:packaged
-      - name: Package the original C and Objective-C edition
+      - name: Package the macOS AppKit edition
         if: runner.os == 'macOS'
         run: |
-          cp assets/icon.png native-macos/assets/icon.png
-          sh native-macos/scripts/package.sh
+          cp assets/icon.png macos/assets/icon.png
+          sh macos/scripts/package.sh
       - name: Upload installers and checksums
         uses: actions/upload-artifact@v4
         with:
@@ -85,8 +86,8 @@ jobs:
             dist/*.AppImage
             dist/*.deb
             dist/SHA256SUMS-*.txt
-            native-macos/dist/*.dmg
-            native-macos/dist/*.pkg
-            native-macos/dist/SHA256SUMS-*.txt
+            macos/dist/*.dmg
+            macos/dist/*.pkg
+            macos/dist/SHA256SUMS-*.txt
           if-no-files-found: error
           retention-days: 30

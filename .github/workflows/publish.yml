@@ -1,0 +1,73 @@
+name: Publish installers
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish.yml']
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Successful installer workflow run ID
+        required: true
+        default: '42539955120'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-installers
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SOURCE_RUN_ID: ${{ inputs.source_run_id || '42539955120' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify the installer workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > source-run.json
+          python3 - <<'PY'
+          import json, os
+          run = json.load(open('source-run.json'))
+          assert run['conclusion'] == 'success', 'The installer workflow must succeed.'
+          assert run['repository']['full_name'] == os.environ['GITHUB_REPOSITORY']
+          PY
+      - name: Download installer bundles
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ env.SOURCE_RUN_ID }}
+          pattern: Glass-Terminal-*
+          path: installer-bundles
+      - name: Verify and collect release assets
+        run: python3 scripts/release-assets.py --input installer-bundles --output release-assets
+      - name: Publish versioned installer downloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./package.json").version')
+          tag="v$version"
+          state=$(gh release view "$tag" --json isDraft --jq '.isDraft' 2>/dev/null || printf 'missing')
+          if [[ "$state" == 'false' ]]; then
+            echo "Release $tag is already published; its assets are unchanged."
+            exit 0
+          fi
+          if [[ "$state" == 'missing' ]]; then
+            gh release create "$tag" --target "$GITHUB_SHA" --title "Glass Terminal $version" --notes-file docs/release.md --draft
+          fi
+          gh release upload "$tag" release-assets/* --clobber
+          gh release edit "$tag" --draft=false --latest
+          printf 'Published https://github.com/%s/releases/tag/%s\n' "$GITHUB_REPOSITORY" "$tag"

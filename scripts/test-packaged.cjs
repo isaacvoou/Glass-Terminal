@@ -14,7 +14,7 @@ function find(directory, depth = 0) {
 }
 const archive = find(path.join(root, 'dist'));
 if (!archive) throw new Error('Packaged app.asar not found. Build the installer first.');
-const result = spawnSync(require('electron'), [path.join(root, 'tests/electron-smoke.cjs')], {
+const result = spawnSync(require('electron'), [path.join(root, 'tests/application.test.cjs')], {
   stdio: 'inherit', env: { ...process.env, GLASS_TEST_PACKAGE: archive }
 });
 if (result.error) throw result.error;
