@@ -7,9 +7,14 @@
   "author": "Glass Terminal contributors",
   "license": "MIT",
   "homepage": "https://github.com/isaacvoou/Glass-Terminal",
-  "repository": { "type": "git", "url": "https://github.com/isaacvoou/Glass-Terminal.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/isaacvoou/Glass-Terminal.git"
+  },
   "main": "app/main.cjs",
-  "engines": { "node": ">=22.12.0" },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "postinstall": "node scripts/setup.cjs",
     "start": "electron .",
@@ -31,6 +36,7 @@
     "node-pty": "1.1.0"
   },
   "devDependencies": {
+    "@xterm/headless": "6.0.0",
     "electron": "45.2.3",
     "electron-builder": "26.18.0",
     "node-gyp": "12.2.0",
@@ -40,13 +46,26 @@
     "appId": "dev.glassterminal.desktop",
     "productName": "Glass Terminal",
     "artifactName": "Glass-Terminal-${version}-${os}-${arch}.${ext}",
-    "directories": { "output": "dist", "buildResources": "build-resources" },
-    "files": ["app/**/*", "assets/icon.png", "package.json", "LICENSE"],
-    "asarUnpack": ["node_modules/node-pty/**/*"],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build-resources"
+    },
+    "files": [
+      "app/**/*",
+      "assets/icon.png",
+      "package.json",
+      "LICENSE"
+    ],
+    "asarUnpack": [
+      "node_modules/node-pty/**/*"
+    ],
     "npmRebuild": false,
     "nativeRebuilder": "sequential",
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.developer-tools",
       "icon": "build-resources/icon.icns",
       "minimumSystemVersion": "13.0",
@@ -54,9 +73,18 @@
       "hardenedRuntime": false,
       "notarize": false
     },
-    "dmg": { "sign": false },
+    "dmg": {
+      "sign": false
+    },
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "build-resources/icon.ico",
       "signAndEditExecutable": true
     },
@@ -71,13 +99,20 @@
       "deleteAppDataOnUninstall": false
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "syncDesktopName": true,
       "icon": "build-resources/icons",
       "category": "System",
       "synopsis": "Transparent terminal emulator",
       "maintainer": "Glass Terminal contributors <noreply@glassterminal.local>",
-      "desktop": { "entry": { "StartupWMClass": "glass-terminal" } }
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "glass-terminal"
+        }
+      }
     }
   }
 }

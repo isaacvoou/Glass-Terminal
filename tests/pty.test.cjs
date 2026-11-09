@@ -2,6 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const pty = require('node-pty');
+const { Terminal } = require('@xterm/headless');
 const os = require('node:os');
 const { shellSpec } = require('../app/policy.cjs');
 const windows = process.platform === 'win32';
@@ -12,10 +13,14 @@ function run(text, options = {}) {
       cols: options.cols || 80, rows: options.rows || 24, cwd: os.homedir(), name: 'xterm-256color',
       env: { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor' }, useConpty: windows
     });
-    let output = '';
-    const timeout = setTimeout(() => { try { processPTY.kill(); } catch {} reject(new Error('PTY timeout: ' + output.slice(-1200))); }, 20000);
-    processPTY.onData(data => { output += data; options.onData?.(processPTY, output); });
-    processPTY.onExit(event => { clearTimeout(timeout); resolve({ output, ...event }); });
+    let output = '', closed = false;
+    // PowerShell/ConPTY may request cursor position or other VT replies.
+    // Exercise them with the same parser as the GUI, rather than a silent pipe.
+    const terminal = new Terminal({ cols: options.cols || 80, rows: options.rows || 24, scrollback: 100 });
+    terminal.onData(data => { if (!closed) processPTY.write(data); });
+    const timeout = setTimeout(() => { reject(new Error('PTY timeout: ' + output.slice(-1200))); try { processPTY.kill(); } catch {} }, 20000);
+    processPTY.onData(data => { output += data; terminal.write(data); options.onData?.(processPTY, output); });
+    processPTY.onExit(event => { closed = true; terminal.dispose(); clearTimeout(timeout); resolve({ output, ...event }); });
     setTimeout(() => processPTY.write(text), windows ? 1000 : 80);
   });
 }

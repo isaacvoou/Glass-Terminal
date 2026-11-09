@@ -22,6 +22,13 @@ try {
     run(process.execPath, [path.join(directory, 'scripts/post-install.js')], directory);
     require('node-pty');
   }
+  if (process.platform === 'darwin') {
+    const directory = path.join(root, 'node_modules/node-pty');
+    for (const relative of ['build/Release/spawn-helper', 'build/Debug/spawn-helper', `prebuilds/darwin-${process.arch}/spawn-helper`]) {
+      const helper = path.join(directory, relative);
+      if (fs.existsSync(helper)) fs.chmodSync(helper, 0o755);
+    }
+  }
   const electronRoot = path.dirname(require.resolve('electron/package.json'));
   if (!fs.existsSync(path.join(electronRoot, 'path.txt')))
     run(process.execPath, [path.join(electronRoot, 'install.js')]);

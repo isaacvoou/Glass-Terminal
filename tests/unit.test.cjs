@@ -26,6 +26,13 @@ test('Windows uses the installed system PowerShell without profile bypass', () =
   assert.match(spec.file, /WindowsPowerShell\\v1\.0\\powershell\.exe$/);
   assert.deepEqual(spec.args, ['-NoLogo']);
 });
+test('Darwin PTY spawn helper is executable', { skip: process.platform !== 'darwin' }, () => {
+  const base = path.dirname(require.resolve('node-pty/package.json'));
+  const candidates = ['build/Release/spawn-helper', 'build/Debug/spawn-helper', `prebuilds/darwin-${process.arch}/spawn-helper`];
+  const helper = candidates.map(file => path.join(base, file)).find(file => fs.existsSync(file));
+  assert.ok(helper, 'node-pty spawn-helper is missing');
+  assert.notEqual(fs.statSync(helper).mode & 0o111, 0, 'node-pty spawn-helper must have execution permission');
+});
 test('icon files contain valid ICO and ICNS records', () => {
   const folder = path.resolve(__dirname, '../build-resources');
   const ico = fs.readFileSync(path.join(folder, 'icon.ico'));
