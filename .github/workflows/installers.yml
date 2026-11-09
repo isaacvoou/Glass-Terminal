@@ -1,0 +1,92 @@
+name: Build installers
+
+on:
+  push:
+    branches: [main, 'codex/**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: installers-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows 10-11 x64
+            runner: windows-latest
+            target: win
+            arch: x64
+          - name: macOS Intel
+            runner: macos-15-intel
+            target: mac
+            arch: x64
+          - name: macOS Apple Silicon
+            runner: macos-15
+            target: mac
+            arch: arm64
+          - name: Linux x64
+            runner: ubuntu-22.04
+            target: linux
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies on the target OS
+        run: npm ci --no-audit --no-fund
+      - name: Prepare resources and icons
+        run: npm run prepare:assets
+      - name: Unit and icon checks
+        run: npm test
+      - name: Exercise native PTY in Electron
+        run: npm run test:pty
+      - name: Exercise the application (Windows and macOS)
+        if: runner.os != 'Linux'
+        run: npm run test:app
+      - name: Exercise the application (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:app
+      - name: Package installers
+        run: npm run dist:${{ matrix.target }}
+      - name: Exercise the packaged application (Windows and macOS)
+        if: runner.os != 'Linux'
+        run: npm run test:packaged
+      - name: Exercise the packaged application (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:packaged
+      - name: Package the original C and Objective-C edition
+        if: runner.os == 'macOS'
+        run: |
+          cp assets/icon.png native-macos/assets/icon.png
+          sh native-macos/scripts/package.sh
+      - name: Upload installers and checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: Glass-Terminal-${{ matrix.target }}-${{ matrix.arch }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.zip
+            dist/*.AppImage
+            dist/*.deb
+            dist/SHA256SUMS-*.txt
+            native-macos/dist/*.dmg
+            native-macos/dist/*.pkg
+            native-macos/dist/SHA256SUMS-*.txt
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,10 @@
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const folder = path.resolve(__dirname, '../dist');
+const files = fs.readdirSync(folder).filter(name => /\.(exe|dmg|zip|deb|AppImage)$/.test(name)).sort();
+if (!files.length) throw new Error('No installer artifacts found.');
+const text = files.map(name => crypto.createHash('sha256').update(fs.readFileSync(path.join(folder, name))).digest('hex') + '  ' + name).join('\n') + '\n';
+fs.writeFileSync(path.join(folder, `SHA256SUMS-${process.platform}-${process.arch}.txt`), text);
+console.log(text);
